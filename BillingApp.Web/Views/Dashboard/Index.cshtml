@@ -1,0 +1,281 @@
+@{
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Loading -->
+<div class="text-center py-5" data-bind="visible: isLoading">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2 text-muted">Loading dashboard...</p>
+</div>
+
+<div data-bind="visible: !isLoading()">
+
+    <div class="page-header">
+        <h3 class="mb-0"> Dashboard</h3>
+        <small class="text-muted">Welcome back — here's your billing overview</small>
+    </div>
+
+    <!-- -- Row 1: Stat Cards ------------------------------- -->
+    <div class="row g-3 mb-4">
+
+        <!-- Total Revenue -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Total Revenue</p>
+                            <h3 class="fw-bold text-success mb-0"
+                                data-bind="text: '$' + totalRevenue().toFixed(2)"></h3>
+                        </div>
+                        <span class="fs-2">Total Revenue</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outstanding -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Outstanding</p>
+                            <h3 class="fw-bold text-danger mb-0"
+                                data-bind="text: '$' + totalOutstanding().toFixed(2)"></h3>
+                        </div>
+                        <span class="fs-2">Outstanding</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Invoices -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Pending Invoices</p>
+                            <h3 class="fw-bold text-warning mb-0"
+                                data-bind="text: counts.Pending"></h3>
+                        </div>
+                        <span class="fs-2">Pending</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue Invoices -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-1 small">Overdue Invoices</p>
+                            <h3 class="fw-bold text-danger mb-0"
+                                data-bind="text: counts.Overdue"></h3>
+                        </div>
+                        <span class="fs-2">Overdue</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- -- Row 2: Invoice Status Breakdown ----------------------------- -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold border-bottom">
+                    Invoice Status Breakdown
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+
+                        <div class="col-md-3">
+                            <div class="p-3 rounded bg-warning bg-opacity-10">
+                                <h4 class="fw-bold text-warning mb-1"
+                                    data-bind="text: counts.Pending"></h4>
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="p-3 rounded bg-success bg-opacity-10">
+                                <h4 class="fw-bold text-success mb-1"
+                                    data-bind="text: counts.Paid"></h4>
+                                <span class="badge bg-success">Paid</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="p-3 rounded bg-danger bg-opacity-10">
+                                <h4 class="fw-bold text-danger mb-1"
+                                    data-bind="text: counts.Overdue"></h4>
+                                <span class="badge bg-danger">Overdue</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div class="p-3 rounded bg-secondary bg-opacity-10">
+                                <h4 class="fw-bold text-secondary mb-1"
+                                    data-bind="text: counts.Cancelled"></h4>
+                                <span class="badge bg-secondary">Cancelled</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- -- Row 3: Recent Invoices + Recent Payments ------------------------->
+    <div class="row g-3">
+
+        <!-- Recent Invoices -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold border-bottom d-flex
+                            justify-content-between align-items-center">
+                    <span> Recent Invoices</span>
+                    <a href="@Url.Action("Index","Invoice")"
+                       class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Customer</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: recentInvoices">
+                            <tr style="cursor:pointer"
+                                data-bind="click: function() {
+                                    window.location.href = '/Invoice/Detail/' + InvoiceId;
+                                }">
+                                <td data-bind="text: InvoiceNumber"></td>
+                                <td data-bind="text: CustomerFullName"></td>
+                                <td class="text-end"
+                                    data-bind="text: '$' + parseFloat(InvoiceTotal).toFixed(2)">
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge"
+                                          data-bind="text: Status,
+                                                     css: $root.statusBadge(Status)">
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody data-bind="visible: recentInvoices().length === 0">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    No invoices yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold border-bottom">
+                    Recent Payments
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Method</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: recentPayments">
+                            <tr>
+                                <td data-bind="text: InvoiceNumber"></td>
+                                <td data-bind="text: PaymentMethod"></td>
+                                <td class="text-end fw-bold text-success"
+                                    data-bind="text: '$' + parseFloat(Amount).toFixed(2)"></td>
+                            </tr>
+                        </tbody>
+                        <tbody data-bind="visible: recentPayments().length === 0">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-3">
+                                    No payments yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section scripts {
+    <script>
+    function DashboardViewModel() {
+        var self = this;
+
+        // -- State--------------------------------------------------------
+        self.isLoading       = ko.observable(true);
+        self.totalRevenue    = ko.observable(0);
+        self.totalOutstanding = ko.observable(0);
+        self.recentInvoices  = ko.observableArray([]);
+        self.recentPayments  = ko.observableArray([]);
+
+        // Invoice status counts
+        self.counts = {
+            Pending   : ko.observable(0),
+            Paid      : ko.observable(0),
+            Overdue   : ko.observable(0),
+            Cancelled : ko.observable(0)
+        };
+
+        // -- Load -------------------------------------------------------
+        self.loadStats = function () {
+            $.get('@Url.Action("GetStats","Dashboard")', function (res) {
+                if (res.success) {
+                    var d = res.data;
+
+                    self.totalRevenue(d.TotalRevenue);
+                    self.totalOutstanding(d.TotalOutstanding);
+
+                    self.counts.Pending(d.InvoiceCounts.Pending);
+                    self.counts.Paid(d.InvoiceCounts.Paid);
+                    self.counts.Overdue(d.InvoiceCounts.Overdue);
+                    self.counts.Cancelled(d.InvoiceCounts.Cancelled);
+
+                    self.recentInvoices(d.RecentInvoices);
+                    self.recentPayments(d.RecentPayments);
+                }
+                self.isLoading(false);
+            });
+        };
+
+        // -- Helper --------------------------------------------------
+        self.statusBadge = function (status) {
+            return {
+                'bg-warning text-dark' : status === 'Pending',
+                'bg-success'           : status === 'Paid',
+                'bg-danger'            : status === 'Overdue',
+                'bg-secondary'         : status === 'Cancelled'
+            };
+        };
+
+        self.loadStats();
+    }
+
+    ko.applyBindings(new DashboardViewModel());
+    </script>
+}

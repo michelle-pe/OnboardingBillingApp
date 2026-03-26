@@ -1,0 +1,197 @@
+@{
+    ViewBag.Title = "Invoices";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"> Invoices</h3>
+    <a href="@Url.Action("Create","Invoice")" class="btn btn-primary">+ New Invoice</a>
+</div>
+
+<!-- Alert -->
+<div data-bind="visible: alertMessage()" style="display:none">
+    <div class="alert" data-bind="text: alertMessage, css: alertClass"></div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2">
+            <div class="col-md-6">
+                <input type="text" class="form-control"
+                       placeholder="Search by invoice number or customer name..."
+                       data-bind="value: searchTerm, valueUpdate: 'input'" />
+            </div>
+            <div class="col-md-6">
+                <select class="form-select" data-bind="value: statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Invoice Date</th>
+                    <th>Due Date</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody data-bind="foreach: filteredInvoices">
+                <tr>
+                    <td data-bind="text: InvoiceNumber"></td>
+                    <td data-bind="text: CustomerFullName"></td>
+                    <td data-bind="text: formatDate(InvoiceDate())"></td>
+                    <td data-bind="text: formatDate(DueDate())"></td>
+                    <td class="text-end"
+                        data-bind="text: '$' + parseFloat(InvoiceTotal()).toFixed(2)"></td>
+                    <td class="text-center">
+                        <span class="badge"
+                              data-bind="text: Status,
+                                         css: $root.statusBadge(Status())">
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <a class="btn btn-sm btn-outline-secondary me-1"
+                           data-bind="attr: { href: '/Invoice/Detail/' + InvoiceId() }">
+                            View
+                        </a>
+                        <!-- Edit only if Pending -->
+                        <a class="btn btn-sm btn-outline-primary me-1"
+                           data-bind="visible: Status() === 'Pending',
+                                      attr: { href: '/Invoice/Edit/' + InvoiceId() }">
+                            Edit
+                        </a>
+                        <!-- Cancel only if Pending -->
+                        <button class="btn btn-sm btn-outline-danger"
+                                data-bind="visible: Status() === 'Pending',
+                                           click: $root.cancelInvoice">
+                            Cancel
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+            <tbody data-bind="visible: filteredInvoices().length === 0">
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No invoices found.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Loading -->
+<div class="text-center py-4" data-bind="visible: isLoading">
+    <div class="spinner-border text-primary"></div>
+</div>
+
+@section scripts {
+    <script>
+    function InvoiceListViewModel() {
+        var self = this;
+
+        self.invoices     = ko.observableArray([]);
+        self.searchTerm   = ko.observable('');
+        self.statusFilter = ko.observable('');
+        self.isLoading    = ko.observable(false);
+        self.alertMessage = ko.observable('');
+        self.alertClass   = ko.observable('alert-success');
+
+        // -- Computed filter -----------------------------------------
+        self.filteredInvoices = ko.computed(function () {
+            var term   = self.searchTerm().toLowerCase();
+            var status = self.statusFilter();
+
+            return ko.utils.arrayFilter(self.invoices(), function (inv) {
+                var matchesSearch = !term ||
+                    inv.InvoiceNumber().toLowerCase().indexOf(term) > -1 ||
+                    inv.CustomerFullName().toLowerCase().indexOf(term) > -1;
+
+                var matchesStatus = !status || inv.Status() === status;
+
+                return matchesSearch && matchesStatus;
+            });
+        });
+
+        // -- Helpers -------------------------------------------------
+        self.statusBadge = function (status) {
+            return {
+                'bg-warning text-dark' : status === 'Pending',
+                'bg-success'           : status === 'Paid',
+                'bg-danger'            : status === 'Overdue',
+                'bg-secondary'         : status === 'Cancelled'
+            };
+        };
+
+        // -- Load ----------------------------------------------------
+        self.loadInvoices = function () {
+            self.isLoading(true);
+            $.get('@Url.Action("GetAll","Invoice")', function (res) {
+                if (res.success) {
+                    var mapped = res.data.map(function (inv) {
+                        return {
+                            InvoiceId       : ko.observable(inv.InvoiceId),
+                            InvoiceNumber   : ko.observable(inv.InvoiceNumber),
+                            CustomerId      : ko.observable(inv.CustomerId),
+                            CustomerFullName: ko.observable(inv.CustomerFullName),
+                            InvoiceDate     : ko.observable(inv.InvoiceDate),
+                            DueDate         : ko.observable(inv.DueDate),
+                            InvoiceTotal    : ko.observable(inv.InvoiceTotal),
+                            Status          : ko.observable(inv.Status)
+                        };
+                    });
+                    self.invoices(mapped);
+                }
+                self.isLoading(false);
+            });
+        };
+
+        // -- Cancel -------------------------------------------------
+        self.cancelInvoice = function (invoice) {
+            if (!confirm('Cancel invoice ' + invoice.InvoiceNumber() + '?')) return;
+
+            $.post('@Url.Action("Cancel","Invoice")', { id: invoice.InvoiceId() },
+            function (res) {
+                if (res.success) {
+                    self.showAlert(res.message, 'alert-success');
+                    self.loadInvoices();
+                } else {
+                    self.showAlert(res.message, 'alert-danger');
+                }
+            });
+        };
+
+        self.showAlert = function (msg, css) {
+            self.alertClass(css);
+            self.alertMessage(msg);
+            setTimeout(function () { self.alertMessage(''); }, 4000);
+        };
+
+        self.loadInvoices();
+    }
+
+    // Date formatter — converts /Date(...)/ from JSON to readable string
+    function formatDate(dateVal) {
+        if (!dateVal) return '—';
+        var d = new Date(parseInt(dateVal.replace('/Date(', '').replace(')/', '')));
+        return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    }
+
+    ko.applyBindings(new InvoiceListViewModel());
+    </script>
+}

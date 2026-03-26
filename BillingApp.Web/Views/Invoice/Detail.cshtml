@@ -1,0 +1,375 @@
+@{
+    ViewBag.Title = "Invoice Detail";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Loading -->
+<div class="text-center py-5" data-bind="visible: isLoading">
+    <div class="spinner-border text-primary"></div>
+</div>
+
+<div data-bind="visible: !isLoading()">
+
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="mb-0" data-bind="text: ' ' + invoiceNumber()"></h3>
+            <span class="badge mt-1"
+                  data-bind="text: status, css: statusBadge()"></span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Index","Invoice")"
+               class="btn btn-outline-secondary">Back</a>
+            <a class="btn btn-outline-primary"
+               data-bind="visible: status() === 'Pending',
+                          attr: { href: '/Invoice/Edit/' + invoiceId() }">
+                Edit
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+
+        <!-- Invoice info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Customer</div>
+                <div class="card-body">
+                    <p class="mb-1 fw-bold" data-bind="text: customerName"></p>
+                    <p class="mb-1 text-muted" data-bind="text: customerEmail"></p>
+                    <p class="mb-0 text-muted" data-bind="text: customerPhone"></p>
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Invoice Info</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6">Invoice Date</dt>
+                        <dd class="col-6" data-bind="text: formatDate(invoiceDate())"></dd>
+                        <dt class="col-6">Due Date</dt>
+                        <dd class="col-6" data-bind="text: formatDate(dueDate())"></dd>
+                        <dt class="col-6">Notes</dt>
+                        <dd class="col-6" data-bind="text: notes() || '—'"></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line items + payments -->
+        <div class="col-md-8">
+
+            <!-- Line Items -->
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Line Items</div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: items">
+                            <tr>
+                                <td data-bind="text: ProductName"></td>
+                                <td class="text-end"
+                                    data-bind="text: '$' + parseFloat(UnitPrice).toFixed(2)"></td>
+                                <td class="text-center" data-bind="text: Quantity"></td>
+                                <td class="text-end fw-bold"
+                                    data-bind="text: '$' + parseFloat(LineTotal).toFixed(2)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <small class="text-muted">
+                                Total Paid:
+                                <strong class="text-success"
+                                        data-bind="text: '$' + totalPaid().toFixed(2)"></strong>
+                            </small>
+                            &nbsp;|&nbsp;
+                            <small class="text-muted">
+                                Remaining:
+                                <strong class="text-danger"
+                                        data-bind="text: '$' + remaining().toFixed(2)"></strong>
+                            </small>
+                        </div>
+                        <h5 class="mb-0">
+                            Total:
+                            <span class="text-primary fw-bold"
+                                  data-bind="text: '$' + invoiceTotal().toFixed(2)"></span>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center fw-bold">
+                    <span> Payment History</span>
+                    <!-- Only show Record Payment if not fully paid or cancelled -->
+                    <button class="btn btn-sm btn-success"
+                            data-bind="visible: status() !== 'Paid' && status() !== 'Cancelled',
+                                       click: openPaymentModal">
+                        + Record Payment
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th class="text-end">Amount</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: payments">
+                            <tr>
+                                <td data-bind="text: formatDate(PaymentDate)"></td>
+                                <td data-bind="text: PaymentMethod"></td>
+                                <td data-bind="text: Reference || '—'"></td>
+                                <td class="text-end fw-bold text-success"
+                                    data-bind="text: '$' + parseFloat(Amount).toFixed(2)"></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-bind="click: $root.deletePayment">
+                                        X
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody data-bind="visible: payments().length === 0">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    No payments recorded yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- -- Payment Modal ------------------------------------------------- -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger"
+                     data-bind="visible: paymentError(), text: paymentError()"
+                     style="display:none"></div>
+
+                <!-- Remaining balance hint -->
+                <div class="alert alert-info">
+                    Remaining balance:
+                    <strong data-bind="text: '$' + remaining().toFixed(2)"></strong>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Payment Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control"
+                           data-bind="value: paymentForm.paymentDate" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0.01" class="form-control"
+                               data-bind="value: paymentForm.amount, valueUpdate: 'input'" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                    <select class="form-select" data-bind="value: paymentForm.paymentMethod">
+                        <option value="">— Select —</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cheque">Cheque</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Reference</label>
+                    <input type="text" class="form-control"
+                           placeholder="e.g. cheque number, transaction ID"
+                           data-bind="value: paymentForm.reference" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-success"
+                        data-bind="click: savePayment">
+                    Record Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+    var invoiceId = @ViewBag.InvoiceId;
+
+    function DetailViewModel() {
+        var self = this;
+
+        // -- Invoice state -------------------------------------------
+        self.isLoading     = ko.observable(true);
+        self.invoiceId     = ko.observable(invoiceId);
+        self.invoiceNumber = ko.observable('');
+        self.status        = ko.observable('');
+        self.customerName  = ko.observable('');
+        self.customerEmail = ko.observable('');
+        self.customerPhone = ko.observable('');
+        self.invoiceDate   = ko.observable('');
+        self.dueDate       = ko.observable('');
+        self.notes         = ko.observable('');
+        self.items         = ko.observableArray([]);
+        self.payments      = ko.observableArray([]);
+        self.paymentError  = ko.observable('');
+
+        // Payment form
+        self.paymentForm = {
+            paymentDate   : ko.observable(today()),
+            amount        : ko.observable(''),
+            paymentMethod : ko.observable(''),
+            reference     : ko.observable('')
+        };
+
+        // -- Computed ------------------------------------------------
+        self.invoiceTotal = ko.computed(function () {
+            return self.items().reduce(function (sum, item) {
+                return sum + parseFloat(item.LineTotal || 0);
+            }, 0);
+        });
+
+        self.totalPaid = ko.computed(function () {
+            return self.payments().reduce(function (sum, p) {
+                return sum + parseFloat(p.Amount || 0);
+            }, 0);
+        });
+
+        self.remaining = ko.computed(function () {
+            return Math.max(0, self.invoiceTotal() - self.totalPaid());
+        });
+
+        self.statusBadge = ko.computed(function () {
+            return {
+                'bg-warning text-dark' : self.status() === 'Pending',
+                'bg-success'           : self.status() === 'Paid',
+                'bg-danger'            : self.status() === 'Overdue',
+                'bg-secondary'         : self.status() === 'Cancelled'
+            };
+        });
+
+        // -- Load -----------------------------------------------------
+        self.loadInvoice = function () {
+            $.get('@Url.Action("GetById","Invoice")', { id: invoiceId }, function (res) {
+                if (res.success) {
+                    var inv = res.data;
+                    self.invoiceNumber(inv.InvoiceNumber);
+                    self.status(inv.Status);
+                    self.customerName(inv.CustomerFullName);
+                    self.customerEmail(inv.CustomerEmail  || '');
+                    self.customerPhone(inv.CustomerPhone  || '');
+                    self.invoiceDate(inv.InvoiceDate);
+                    self.dueDate(inv.DueDate);
+                    self.notes(inv.Notes || '');
+                    self.items(inv.Items);
+                    self.payments(inv.Payments);
+                }
+                self.isLoading(false);
+            });
+        };
+
+        // -- Payment modal --------------------------------------------
+        self.openPaymentModal = function () {
+            self.paymentError('');
+            self.paymentForm.paymentDate(today());
+            self.paymentForm.amount('');
+            self.paymentForm.paymentMethod('');
+            self.paymentForm.reference('');
+            $('#paymentModal').modal('show');
+        };
+
+        self.savePayment = function () {
+            self.paymentError('');
+
+            if (!self.paymentForm.paymentDate()) {
+                self.paymentError('Payment date is required.'); return;
+            }
+            if (!self.paymentForm.amount() || parseFloat(self.paymentForm.amount()) <= 0) {
+                self.paymentError('Enter a valid amount.'); return;
+            }
+            if (parseFloat(self.paymentForm.amount()) > self.remaining()) {
+                self.paymentError('Amount exceeds remaining balance of $' +
+                    self.remaining().toFixed(2) + '.'); return;
+            }
+            if (!self.paymentForm.paymentMethod()) {
+                self.paymentError('Please select a payment method.'); return;
+            }
+
+            var data = {
+                InvoiceId     : invoiceId,
+                PaymentDate   : self.paymentForm.paymentDate(),
+                Amount        : self.paymentForm.amount(),
+                PaymentMethod : self.paymentForm.paymentMethod(),
+                Reference     : self.paymentForm.reference()
+            };
+
+            $.post('@Url.Action("Create","Payment")', data, function (res) {
+                if (res.success) {
+                    $('#paymentModal').modal('hide');
+                    self.loadInvoice();   // reload to show updated status
+                } else {
+                    self.paymentError(res.message);
+                }
+            });
+        };
+
+        self.deletePayment = function (payment) {
+            if (!confirm('Delete this payment of $' +
+                parseFloat(payment.Amount).toFixed(2) + '?')) return;
+
+            $.post('@Url.Action("Delete","Payment")', { id: payment.PaymentId },
+            function (res) {
+                if (res.success) {
+                    self.loadInvoice();
+                } else {
+                    alert(res.message);
+                }
+            });
+        };
+
+        // -- Helpers -------------------------------------------------
+        function today() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        self.loadInvoice();
+    }
+
+    function formatDate(dateVal) {
+        if (!dateVal) return '—';
+        var d = new Date(parseInt(dateVal.replace('/Date(', '').replace(')/', '')));
+        return d.toLocaleDateString('en-GB');
+    }
+
+    ko.applyBindings(new DetailViewModel());
+    </script>
+}

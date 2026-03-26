@@ -1,0 +1,271 @@
+@{
+    ViewBag.Title = "Products";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"> Products</h3>
+    <button class="btn btn-primary" data-bind="click: openCreateModal">
+        + New Product
+    </button>
+</div>
+
+<!-- Alert -->
+<div data-bind="visible: alertMessage()" style="display:none">
+    <div class="alert" data-bind="text: alertMessage, css: alertClass"></div>
+</div>
+
+<!-- Search -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <input type="text" class="form-control" placeholder="Search by product name..."
+               data-bind="value: searchTerm, valueUpdate: 'input'" />
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Product Name</th>
+                    <th>Description</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody data-bind="foreach: filteredProducts">
+                <tr>
+                    <td data-bind="text: ProductId"></td>
+                    <td data-bind="text: ProductName"></td>
+                    <td data-bind="text: Description() || '—'"></td>
+                    <td class="text-end" data-bind="text: '$' + parseFloat(UnitPrice()).toFixed(2)"></td>
+                    <td class="text-center">
+                        <span class="badge bg-success" data-bind="visible: IsActive()">Active</span>
+                        <span class="badge bg-secondary" data-bind="visible: !IsActive()">Inactive</span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary me-1"
+                                data-bind="click: $root.openEditModal">
+                            Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                                data-bind="click: $root.deleteProduct">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+            <tbody data-bind="visible: filteredProducts().length === 0">
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No products found.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Loading spinner -->
+<div class="text-center py-4" data-bind="visible: isLoading">
+    <div class="spinner-border text-primary"></div>
+</div>
+
+<!-- -- Create / Edit Modal -------------------------------------- -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" data-bind="text: modalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Validation error -->
+                <div class="alert alert-danger"
+                     data-bind="visible: modalError(), text: modalError()"
+                     style="display:none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label">Product Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control"
+                           data-bind="value: form.ProductName,
+                                      css: {'is-invalid': !form.ProductName()}" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" rows="2"
+                              data-bind="value: form.Description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Unit Price <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0.01" class="form-control"
+                               data-bind="value: form.UnitPrice,
+                               css: {'is-invalid': !(form.UnitPrice()> 0)}" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary"
+                        data-bind="click: saveProduct, text: saveButtonText"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+    function ProductViewModel() {
+        var self = this;
+
+        // -- State --------------------------------------------------
+        self.products     = ko.observableArray([]);
+        self.searchTerm   = ko.observable('');
+        self.isLoading    = ko.observable(false);
+        self.alertMessage = ko.observable('');
+        self.alertClass   = ko.observable('alert-success');
+        self.isEditing    = ko.observable(false);
+        self.modalError   = ko.observable('');
+
+        // Form observables
+        self.form = {
+            ProductId   : ko.observable(0),
+            ProductName : ko.observable(''),
+            Description : ko.observable(''),
+            UnitPrice   : ko.observable('')
+        };
+
+        // -- Computed -----------------------------------------------
+        self.modalTitle = ko.computed(function () {
+            return self.isEditing() ? 'Edit Product' : 'New Product';
+        });
+
+        self.saveButtonText = ko.computed(function () {
+            return self.isEditing() ? 'Update' : 'Create';
+        });
+
+        self.filteredProducts = ko.computed(function () {
+            var term = self.searchTerm().toLowerCase();
+            if (!term) return self.products();
+            return ko.utils.arrayFilter(self.products(), function (p) {
+                return p.ProductName().toLowerCase().indexOf(term) > -1;
+            });
+        });
+
+        // -- Load -------------------------------------------------------
+        self.loadProducts = function () {
+            self.isLoading(true);
+            $.get('@Url.Action("GetAll","Product")', function (res) {
+                if (res.success) {
+                    var mapped = res.data.map(function (p) {
+                        return {
+                            ProductId   : ko.observable(p.ProductId),
+                            ProductName : ko.observable(p.ProductName),
+                            Description : ko.observable(p.Description),
+                            UnitPrice   : ko.observable(p.UnitPrice),
+                            IsActive    : ko.observable(p.IsActive)
+                        };
+                    });
+                    self.products(mapped);
+                }
+                self.isLoading(false);
+            });
+        };
+
+        // -- Modal helpers --------------------------------------------
+        self.openCreateModal = function () {
+            self.isEditing(false);
+            self.modalError('');
+            self.form.ProductId(0);
+            self.form.ProductName('');
+            self.form.Description('');
+            self.form.UnitPrice('');
+            $('#productModal').modal('show');
+        };
+
+        self.openEditModal = function (product) {
+            self.isEditing(true);
+            self.modalError('');
+            self.form.ProductId(product.ProductId());
+            self.form.ProductName(product.ProductName());
+            self.form.Description(product.Description());
+            self.form.UnitPrice(product.UnitPrice());
+            $('#productModal').modal('show');
+        };
+
+        // -- Client-side validation ----------------------------------
+        self.validateForm = function () {
+            if (!self.form.ProductName()) {
+                self.modalError('Product name is required.');
+                return false;
+            }
+            if (!self.form.UnitPrice() || parseFloat(self.form.UnitPrice()) <= 0) {
+                self.modalError('Unit price must be greater than zero.');
+                return false;
+            }
+            self.modalError('');
+            return true;
+        };
+
+        // -- Save (Create or Update) ---------------------------------
+        self.saveProduct = function () {
+            if (!self.validateForm()) return;
+
+            var url = self.isEditing()
+                      ? '@Url.Action("Update","Product")'
+                      : '@Url.Action("Create","Product")';
+
+            var data = {
+                ProductId   : self.form.ProductId(),
+                ProductName : self.form.ProductName(),
+                Description : self.form.Description(),
+                UnitPrice   : self.form.UnitPrice()
+            };
+
+            $.post(url, data, function (res) {
+                if (res.success) {
+                    $('#productModal').modal('hide');
+                    self.showAlert(res.message, 'alert-success');
+                    self.loadProducts();
+                } else {
+                    self.modalError(res.message);
+                }
+            });
+        };
+
+        // -- Delete ------------------------------------------------------
+        self.deleteProduct = function (product) {
+            if (!confirm('Delete "' + product.ProductName() + '"?')) return;
+
+            $.post('@Url.Action("Delete","Product")', { id: product.ProductId() }, function (res) {
+                if (res.success) {
+                    self.showAlert(res.message, 'alert-success');
+                    self.loadProducts();
+                } else {
+                    self.showAlert(res.message, 'alert-danger');
+                }
+            });
+        };
+
+        // -- Alert helper ---------------------------------------------
+        self.showAlert = function (message, cssClass) {
+            self.alertClass(cssClass);
+            self.alertMessage(message);
+            setTimeout(function () { self.alertMessage(''); }, 4000);
+        };
+
+        // -- Init ----------------------------------------------------
+        self.loadProducts();
+    }
+
+    ko.applyBindings(new ProductViewModel());
+    </script>
+}

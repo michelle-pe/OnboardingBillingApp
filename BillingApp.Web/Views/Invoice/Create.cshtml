@@ -1,0 +1,291 @@
+@{
+    ViewBag.Title = "New Invoice";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"> New Invoice</h3>
+    <a href="@Url.Action("Index","Invoice")" class="btn btn-outline-secondary">
+        Back to Invoices
+    </a>
+</div>
+
+<!-- Alert -->
+<div data-bind="visible: alertMessage()" style="display:none">
+    <div class="alert alert-danger" data-bind="text: alertMessage"></div>
+</div>
+
+<div class="row">
+
+    <!-- Left — Invoice Header -->
+    <div class="col-md-5">
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Invoice Details</div>
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label class="form-label">Customer <span class="text-danger">*</span></label>
+                    <select class="form-select"
+                            data-bind="options: customers,
+                                       optionsText: 'FullName',
+                                       optionsValue: 'CustomerId',
+                                       value: selectedCustomerId,
+                                       optionsCaption: '— Select Customer —'">
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Invoice Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control"
+                           data-bind="value: invoiceDate" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Due Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control"
+                           data-bind="value: dueDate" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" rows="3"
+                              data-bind="value: notes"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right — Line Items -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center fw-bold">
+                <span>Line Items</span>
+                <button class="btn btn-sm btn-success"
+                        data-bind="click: addItem">
+                    Add Item
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Unit Price</th>
+                            <th style="width:90px">Qty</th>
+                            <th class="text-end">Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: items">
+                        <tr>
+                            <td>
+                                <select class="form-select form-select-sm"
+                                        data-bind="options: $root.products,
+                                                   optionsText: 'ProductName',
+                                                   optionsValue: 'ProductId',
+                                                   value: productId,
+                                                   optionsCaption: '— Select —',
+                                                   event: { change: $root.onProductChange.bind($root, $data) }">
+                                </select>
+                            </td>
+                            <td class="text-end align-middle"
+                                data-bind="text: '$' + parseFloat(unitPrice() || 0).toFixed(2)">
+                            </td>
+                            <td>
+                                <input type="number" min="1" class="form-control form-control-sm"
+                                       data-bind="value: quantity, valueUpdate: 'input'" />
+                            </td>
+                            <td class="text-end align-middle fw-bold"
+                                data-bind="text: '$' + lineTotal().toFixed(2)">
+                            </td>
+                            <td class="text-center align-middle">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        data-bind="click: $root.removeItem">
+                                    X
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <!-- Empty state -->
+                    <tbody data-bind="visible: items().length === 0">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                No items added yet. Click "+ Add Item".
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Invoice Total -->
+            <div class="card-footer">
+                <div class="d-flex justify-content-end align-items-center">
+                    <h5 class="mb-0 me-3">Invoice Total:</h5>
+                    <h4 class="mb-0 text-primary fw-bold"
+                        data-bind="text: '$' + invoiceTotal().toFixed(2)"></h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save -->
+        <div class="d-flex justify-content-end mt-3 gap-2">
+            <a href="@Url.Action("Index","Invoice")"
+               class="btn btn-outline-secondary">Cancel</a>
+            <button class="btn btn-primary btn-lg"
+                    data-bind="click: saveInvoice">
+                Save Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+    function CreateInvoiceViewModel() {
+        var self = this;
+
+        // -- State ---------------------------------------------------
+        self.customers        = ko.observableArray([]);
+        self.products         = ko.observableArray([]);
+        self.items            = ko.observableArray([]);
+        self.selectedCustomerId = ko.observable('');
+        self.invoiceDate      = ko.observable(today());
+        self.dueDate          = ko.observable('');
+        self.notes            = ko.observable('');
+        self.alertMessage     = ko.observable('');
+
+        // -- Computed total ------------------------------------------
+        self.invoiceTotal = ko.computed(function () {
+            var total = 0;
+            ko.utils.arrayForEach(self.items(), function (item) {
+                total += item.lineTotal();
+            });
+            return total;
+        });
+
+        // -- Load dropdowns -------------------------------------------
+        self.loadDropdowns = function () {
+            $.get('@Url.Action("GetCustomers","Invoice")', function (res) {
+                if (res.success) {
+                    // Add computed FullName for the dropdown display
+                    var mapped = res.data.map(function (c) {
+                        c.FullName = c.FirstName + ' ' + c.LastName;
+                        return c;
+                    });
+                    self.customers(mapped);
+                }
+            });
+
+            $.get('@Url.Action("GetProducts","Invoice")', function (res) {
+                if (res.success) self.products(res.data);
+            });
+        };
+
+        // -- Line item factory ---------------------------------------
+        function createItem() {
+            var productId = ko.observable('');
+            var unitPrice = ko.observable(0);
+            var quantity  = ko.observable(1);
+
+            var lineTotal = ko.computed(function () {
+                return parseFloat(unitPrice() || 0) * parseInt(quantity() || 0);
+            });
+
+            return { productId: productId, unitPrice: unitPrice,
+                     quantity: quantity, lineTotal: lineTotal };
+        }
+
+        self.addItem = function () {
+            self.items.push(createItem());
+        };
+
+        self.removeItem = function (item) {
+            self.items.remove(item);
+        };
+
+        // When product dropdown changes, auto-populate unit price
+        self.onProductChange = function (item) {
+            var pid      = parseInt(item.productId());
+            var products = self.products();
+            var found    = ko.utils.arrayFirst(products, function (p) {
+                return p.ProductId === pid;
+            });
+            if (found) item.unitPrice(found.UnitPrice);
+        };
+
+        // -- Validation -----------------------------------------------
+        self.validate = function () {
+            if (!self.selectedCustomerId()) {
+                self.alertMessage('Please select a customer.'); return false;
+            }
+            if (!self.invoiceDate()) {
+                self.alertMessage('Invoice date is required.'); return false;
+            }
+            if (!self.dueDate()) {
+                self.alertMessage('Due date is required.'); return false;
+            }
+            if (self.dueDate() < self.invoiceDate()) {
+                self.alertMessage('Due date cannot be before invoice date.'); return false;
+            }
+            if (self.items().length === 0) {
+                self.alertMessage('Add at least one line item.'); return false;
+            }
+            var valid = true;
+            ko.utils.arrayForEach(self.items(), function (item) {
+                if (!item.productId()) {
+                    self.alertMessage('Select a product for every line item.'); valid = false;
+                }
+                if (parseInt(item.quantity()) < 1) {
+                    self.alertMessage('Quantity must be at least 1.'); valid = false;
+                }
+            });
+            return valid;
+        };
+
+        // -- Save ----------------------------------------------------
+        self.saveInvoice = function () {
+            self.alertMessage('');
+            if (!self.validate()) return;
+
+            var payload = {
+                invoice: {
+                    CustomerId  : self.selectedCustomerId(),
+                    InvoiceDate : self.invoiceDate(),
+                    DueDate     : self.dueDate(),
+                    Notes       : self.notes()
+                },
+                items: ko.utils.arrayMap(self.items(), function (item) {
+                    return {
+                        ProductId : item.productId(),
+                        Quantity  : item.quantity(),
+                        UnitPrice : item.unitPrice()
+                    };
+                })
+            };
+
+            $.ajax({
+                url         : '@Url.Action("Create","Invoice")',
+                type        : 'POST',
+                contentType : 'application/json',
+                data        : JSON.stringify(payload),
+                success     : function (res) {
+                    if (res.success) {
+                        window.location.href = '@Url.Action("Index","Invoice")';
+                    } else {
+                        self.alertMessage(res.message);
+                    }
+                }
+            });
+        };
+
+        // -- Helpers -------------------------------------------------
+        function today() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        self.loadDropdowns();
+    }
+
+    ko.applyBindings(new CreateInvoiceViewModel());
+    </script>
+}
