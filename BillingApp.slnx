@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BillingApp.Business/BillingApp.Business.csproj" />
+  <Project Path="BillingApp.Data/BillingApp.Data.csproj" />
+  <Project Path="BillingApp.Web/BillingApp.Web.csproj" />
+</Solution>
