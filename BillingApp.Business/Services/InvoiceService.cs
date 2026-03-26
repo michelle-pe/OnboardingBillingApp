@@ -22,12 +22,36 @@ namespace BillingApp.Business.Services
         // -- List -----------------------------------------------------
         public List<Invoice> GetAllInvoices()
         {
-            return _invoiceRepo.GetAll();
+            var invoices = _invoiceRepo.GetAll();
+
+            // Auto-mark overdue invoices
+            foreach (var inv in invoices)
+            {
+                if (inv.Status == "Pending" && inv.DueDate < DateTime.Now)
+                {
+                    _invoiceRepo.UpdateStatus(inv.InvoiceId, "Overdue");
+                    inv.Status = "Overdue";
+                }
+            }
+
+            return invoices;
         }
 
         public List<Invoice> GetInvoicesByStatus(string status)
         {
             ValidateStatus(status);
+
+            // First run the overdue check across all invoices
+            var all = _invoiceRepo.GetAll();
+            foreach (var inv in all)
+            {
+                if (inv.Status == "Pending" && inv.DueDate < DateTime.Now)
+                {
+                    _invoiceRepo.UpdateStatus(inv.InvoiceId, "Overdue");
+                }
+            }
+
+            // Now return filtered list
             return _invoiceRepo.GetByStatus(status);
         }
 
@@ -38,7 +62,13 @@ namespace BillingApp.Business.Services
             if (invoice == null)
                 throw new Exception("Invoice not found.");
 
-            // Attach line items and payment history
+            // Auto-mark overdue if past due date with no full payment
+            if (invoice.Status == "Pending" && invoice.DueDate < DateTime.Now)
+            {
+                _invoiceRepo.UpdateStatus(invoiceId, "Overdue");
+                invoice.Status = "Overdue";
+            }
+
             invoice.Items = _itemRepo.GetByInvoiceId(invoiceId);
             invoice.Payments = _paymentRepo.GetByInvoiceId(invoiceId);
 
@@ -105,14 +135,15 @@ namespace BillingApp.Business.Services
         // -- Called by PaymentService after every payment change ------
         public void RecalculateStatus(int invoiceId)
         {
+            var invoice = _invoiceRepo.GetById(invoiceId);
             decimal invoiceTotal = _itemRepo.GetInvoiceTotal(invoiceId);
             decimal totalPaid = _paymentRepo.GetTotalPaid(invoiceId);
 
             string newStatus;
 
-            if (totalPaid >= invoiceTotal)
+            if (totalPaid >= invoiceTotal && invoiceTotal > 0)
                 newStatus = "Paid";
-            else if (DateTime.Now > _invoiceRepo.GetById(invoiceId).DueDate)
+            else if (invoice.DueDate < DateTime.Now)
                 newStatus = "Overdue";
             else
                 newStatus = "Pending";

@@ -365,9 +365,13 @@
     }
 
     function formatDate(dateVal) {
-        if (!dateVal) return '—';
-        var d = new Date(parseInt(dateVal.replace('/Date(', '').replace(')/', '')));
-        return d.toLocaleDateString('en-GB');
+        if (!dateVal) return '-';
+        var ms = parseInt(dateVal.replace('/Date(', '').replace(')/', ''));
+        var d = new Date(ms);
+        var day = String(d.getDate()).padStart(2, '0');
+        var mon = String(d.getMonth() + 1).padStart(2, '0');
+        var year = d.getFullYear();
+        return day + '/' + mon + '/' + year;
     }
 
     ko.applyBindings(new DetailViewModel());

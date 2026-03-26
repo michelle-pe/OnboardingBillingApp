@@ -280,8 +280,13 @@
 
         function toInputDate(dateVal) {
             if (!dateVal) return '';
-            var d = new Date(parseInt(dateVal.replace('/Date(', '').replace(')/', '')));
-            return d.toISOString().split('T')[0];
+            var ms = parseInt(dateVal.replace('/Date(', '').replace(')/', ''));
+            var d = new Date(ms);
+            // Use local date parts instead of UTC to avoid timezone shift
+            var year = d.getFullYear();
+            var month = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
         }
 
         self.init();
