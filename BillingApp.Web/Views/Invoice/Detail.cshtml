@@ -1,4 +1,4 @@
-@{
+ï»¿@{
     ViewBag.Title = "Invoice Detail";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
@@ -48,7 +48,7 @@
                         <dt class="col-6">Due Date</dt>
                         <dd class="col-6" data-bind="text: formatDate(dueDate())"></dd>
                         <dt class="col-6">Notes</dt>
-                        <dd class="col-6" data-bind="text: notes() || '—'"></dd>
+                        <dd class="col-6" data-bind="text: notes() || 'â€”'"></dd>
                     </dl>
                 </div>
             </div>
@@ -132,7 +132,7 @@
                             <tr>
                                 <td data-bind="text: formatDate(PaymentDate)"></td>
                                 <td data-bind="text: PaymentMethod"></td>
-                                <td data-bind="text: Reference || '—'"></td>
+                                <td data-bind="text: Reference || 'â€”'"></td>
                                 <td class="text-end fw-bold text-success"
                                     data-bind="text: '$' + parseFloat(Amount).toFixed(2)"></td>
                                 <td class="text-center">
@@ -193,7 +193,7 @@
                 <div class="mb-3">
                     <label class="form-label">Payment Method <span class="text-danger">*</span></label>
                     <select class="form-select" data-bind="value: paymentForm.paymentMethod">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         <option value="Cash">Cash</option>
                         <option value="Card">Card</option>
                         <option value="Bank Transfer">Bank Transfer</option>
@@ -365,7 +365,7 @@
     }
 
     function formatDate(dateVal) {
-        if (!dateVal) return '—';
+        if (!dateVal) return 'â€”';
         var d = new Date(parseInt(dateVal.replace('/Date(', '').replace(')/', '')));
         return d.toLocaleDateString('en-GB');
     }

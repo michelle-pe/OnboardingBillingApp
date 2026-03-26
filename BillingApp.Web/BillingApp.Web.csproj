@@ -151,6 +151,7 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="Scripts\app\customer.js" />
     <Content Include="Scripts\bootstrap.bundle.js" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
     <Content Include="Scripts\bootstrap.esm.js" />
@@ -222,6 +223,10 @@
     <ProjectReference Include="..\BillingApp.Business\BillingApp.Business.csproj">
       <Project>{a0360cf3-dde6-4cee-8366-4986b649956d}</Project>
       <Name>BillingApp.Business</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BillingApp.Data\BillingApp.Data.csproj">
+      <Project>{f1c49c5b-53da-4b86-b9ef-312232e43990}</Project>
+      <Name>BillingApp.Data</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>

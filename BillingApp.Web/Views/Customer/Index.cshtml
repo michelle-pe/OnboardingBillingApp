@@ -42,8 +42,8 @@
                     <td data-bind="text: CustomerId"></td>
                     <td data-bind="text: FirstName() + ' ' + LastName()"></td>
                     <td data-bind="text: Email"></td>
-                    <td data-bind="text: Phone() || '—'"></td>
-                    <td data-bind="text: Address() || '—'"></td>
+                    <td data-bind="text: Phone() || '-'"></td>
+                    <td data-bind="text: Address() || '-'"></td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-outline-primary me-1"
                                 data-bind="click: $root.openEditModal">
@@ -70,7 +70,7 @@
     <div class="spinner-border text-primary"></div>
 </div>
 
-<!-- -- Create / Edit Modal ------------------------------------------ -->
+<!-- Create / Edit Modal -->
 <div class="modal fade" id="customerModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -79,11 +79,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-
-                <!-- Validation error -->
-                <div class="alert alert-danger" data-bind="visible: modalError(), text: modalError()"
+                <div class="alert alert-danger"
+                     data-bind="visible: modalError(), text: modalError()"
                      style="display:none"></div>
-
                 <div class="mb-3">
                     <label class="form-label">First Name <span class="text-danger">*</span></label>
                     <input type="text" class="form-control"
@@ -105,11 +103,15 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Address</label>
-                    <textarea class="form-control" rows="2" data-bind="value: form.Address"></textarea>
+                    <textarea class="form-control" rows="2"
+                              data-bind="value: form.Address"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
                 <button type="button" class="btn btn-primary"
                         data-bind="click: saveCustomer, text: saveButtonText"></button>
             </div>
@@ -118,161 +120,13 @@
 </div>
 
 @section scripts {
+    <script src="~/Scripts/app/customer.js"></script>
     <script>
-    function CustomerViewModel() {
-        var self = this;
-
-        // -- State --------------------------------------------------
-        self.customers      = ko.observableArray([]);
-        self.searchTerm     = ko.observable('');
-        self.isLoading      = ko.observable(false);
-        self.alertMessage   = ko.observable('');
-        self.alertClass     = ko.observable('alert-success');
-        self.isEditing      = ko.observable(false);
-        self.modalError     = ko.observable('');
-
-        // Form observables
-        self.form = {
-            CustomerId : ko.observable(0),
-            FirstName  : ko.observable(''),
-            LastName   : ko.observable(''),
-            Email      : ko.observable(''),
-            Phone      : ko.observable(''),
-            Address    : ko.observable('')
-        };
-
-        // -- Computed ------------------------------------------------
-        self.modalTitle = ko.computed(function () {
-            return self.isEditing() ? 'Edit Customer' : 'New Customer';
-        });
-
-        self.saveButtonText = ko.computed(function () {
-            return self.isEditing() ? 'Update' : 'Create';
-        });
-
-        self.filteredCustomers = ko.computed(function () {
-            var term = self.searchTerm().toLowerCase();
-            if (!term) return self.customers();
-            return ko.utils.arrayFilter(self.customers(), function (c) {
-                return (c.FirstName() + ' ' + c.LastName()).toLowerCase().indexOf(term) > -1
-                    || c.Email().toLowerCase().indexOf(term) > -1;
-            });
-        });
-
-        // -- Load ----------------------------------------------------
-        self.loadCustomers = function () {
-            self.isLoading(true);
-            $.get('@Url.Action("GetAll","Customer")', function (res) {
-                if (res.success) {
-                    // Map plain objects to observables so Knockout can track changes
-                    var mapped = res.data.map(function (c) {
-                        return {
-                            CustomerId : ko.observable(c.CustomerId),
-                            FirstName  : ko.observable(c.FirstName),
-                            LastName   : ko.observable(c.LastName),
-                            Email      : ko.observable(c.Email),
-                            Phone      : ko.observable(c.Phone),
-                            Address    : ko.observable(c.Address)
-                        };
-                    });
-                    self.customers(mapped);
-                }
-                self.isLoading(false);
-            });
-        };
-
-        // -- Modal helpers -------------------------------------------
-        self.openCreateModal = function () {
-            self.isEditing(false);
-            self.modalError('');
-            self.form.CustomerId(0);
-            self.form.FirstName('');
-            self.form.LastName('');
-            self.form.Email('');
-            self.form.Phone('');
-            self.form.Address('');
-            $('#customerModal').modal('show');
-        };
-
-        self.openEditModal = function (customer) {
-            self.isEditing(true);
-            self.modalError('');
-            self.form.CustomerId(customer.CustomerId());
-            self.form.FirstName(customer.FirstName());
-            self.form.LastName(customer.LastName());
-            self.form.Email(customer.Email());
-            self.form.Phone(customer.Phone());
-            self.form.Address(customer.Address());
-            $('#customerModal').modal('show');
-        };
-
-        // -- Client-side validation ---------------------------------
-        self.validateForm = function () {
-            if (!self.form.FirstName()) { self.modalError('First name is required.'); return false; }
-            if (!self.form.LastName())  { self.modalError('Last name is required.');  return false; }
-            if (!self.form.Email())     { self.modalError('Email is required.');       return false; }
-            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(self.form.Email())) {
-                self.modalError('Please enter a valid email address.');
-                return false;
-            }
-            self.modalError('');
-            return true;
-        };
-
-        // -- Save (Create or Update) ---------------------------------
-        self.saveCustomer = function () {
-            if (!self.validateForm()) return;
-
-            var url  = self.isEditing()
-                       ? '@Url.Action("Update","Customer")'
-                       : '@Url.Action("Create","Customer")';
-
-            var data = {
-                CustomerId : self.form.CustomerId(),
-                FirstName  : self.form.FirstName(),
-                LastName   : self.form.LastName(),
-                Email      : self.form.Email(),
-                Phone      : self.form.Phone(),
-                Address    : self.form.Address()
-            };
-
-            $.post(url, data, function (res) {
-                if (res.success) {
-                    $('#customerModal').modal('hide');
-                    self.showAlert(res.message, 'alert-success');
-                    self.loadCustomers();
-                } else {
-                    self.modalError(res.message);
-                }
-            });
-        };
-
-        // -- Delete ---------------------------------------------------
-        self.deleteCustomer = function (customer) {
-            if (!confirm('Delete ' + customer.FirstName() + ' ' + customer.LastName() + '?')) return;
-
-            $.post('@Url.Action("Delete","Customer")', { id: customer.CustomerId() }, function (res) {
-                if (res.success) {
-                    self.showAlert(res.message, 'alert-success');
-                    self.loadCustomers();
-                } else {
-                    self.showAlert(res.message, 'alert-danger');
-                }
-            });
-        };
-
-        // -- Alert helper --------------------------------------------
-        self.showAlert = function (message, cssClass) {
-            self.alertClass(cssClass);
-            self.alertMessage(message);
-            setTimeout(function () { self.alertMessage(''); }, 4000);
-        };
-
-        // -- Init -----------------------------------------------------
-        self.loadCustomers();
-    }
-
-    ko.applyBindings(new CustomerViewModel());
+        ko.applyBindings(new CustomerViewModel(
+            '@Url.Action("GetAll",   "Customer")',
+            '@Url.Action("Create",  "Customer")',
+            '@Url.Action("Update",  "Customer")',
+            '@Url.Action("Delete",  "Customer")'
+        ));
     </script>
 }

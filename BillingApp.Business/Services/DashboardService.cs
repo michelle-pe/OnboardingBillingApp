@@ -2,6 +2,7 @@
 using BillingApp.Data.Models;
 using BillingApp.Data.Repositories;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BillingApp.Business.Services
 {
