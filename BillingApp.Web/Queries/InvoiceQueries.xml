@@ -1,0 +1,145 @@
+﻿<queries>
+
+	<!-- ── List ── -->
+	<query name="GetAllInvoices">
+		SELECT
+		i.INVOICE_ID,
+		i.INVOICE_NUMBER,
+		i.INVOICE_DATE,
+		i.DUE_DATE,
+		i.STATUS,
+		i.NOTES,
+		i.CREATED_DATE,
+		c.CUSTOMER_ID,
+		c.FIRST_NAME,
+		c.LAST_NAME,
+		c.EMAIL,
+		ISNULL(
+		(SELECT SUM(LINE_TOTAL)
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = i.INVOICE_ID), 0
+		) AS INVOICE_TOTAL
+		FROM HS_BILL_INVOICES i
+		INNER JOIN HS_BILL_CUSTOMERS c ON c.CUSTOMER_ID = i.CUSTOMER_ID
+		ORDER BY i.CREATED_DATE DESC
+	</query>
+
+	<query name="GetInvoicesByStatus">
+		SELECT
+		i.INVOICE_ID,
+		i.INVOICE_NUMBER,
+		i.INVOICE_DATE,
+		i.DUE_DATE,
+		i.STATUS,
+		i.NOTES,
+		c.FIRST_NAME,
+		c.LAST_NAME,
+		ISNULL(
+		(SELECT SUM(LINE_TOTAL)
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = i.INVOICE_ID), 0
+		) AS INVOICE_TOTAL
+		FROM HS_BILL_INVOICES i
+		INNER JOIN HS_BILL_CUSTOMERS c ON c.CUSTOMER_ID = i.CUSTOMER_ID
+		WHERE i.STATUS = @Status
+		ORDER BY i.CREATED_DATE DESC
+	</query>
+
+	<!-- ── Detail ── -->
+	<query name="GetInvoiceById">
+		SELECT
+		i.*,
+		c.FIRST_NAME,
+		c.LAST_NAME,
+		c.EMAIL,
+		c.PHONE,
+		c.ADDRESS
+		FROM HS_BILL_INVOICES i
+		INNER JOIN HS_BILL_CUSTOMERS c ON c.CUSTOMER_ID = i.CUSTOMER_ID
+		WHERE i.INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- ── Create ── -->
+	<query name="InsertInvoice">
+		INSERT INTO HS_BILL_INVOICES
+		(INVOICE_NUMBER, CUSTOMER_ID, INVOICE_DATE, DUE_DATE, NOTES, STATUS)
+		VALUES
+		(@InvoiceNumber, @CustomerId, @InvoiceDate, @DueDate, @Notes, 'Pending');
+
+		SELECT SCOPE_IDENTITY() AS INVOICE_ID;
+	</query>
+
+	<!-- Auto-generate next invoice number, e.g. INV-0005 -->
+	<query name="GetNextInvoiceNumber">
+		SELECT 'INV-' + RIGHT('0000' + CAST(
+		ISNULL(
+		(SELECT MAX(CAST(SUBSTRING(INVOICE_NUMBER, 5, 10) AS INT))
+		FROM HS_BILL_INVOICES), 0
+		) + 1
+		AS NVARCHAR), 4) AS NEXT_INVOICE_NUMBER
+	</query>
+
+	<!-- ── Update ── -->
+	<query name="UpdateInvoice">
+		UPDATE HS_BILL_INVOICES
+		SET CUSTOMER_ID  = @CustomerId,
+		INVOICE_DATE = @InvoiceDate,
+		DUE_DATE     = @DueDate,
+		NOTES        = @Notes
+		WHERE INVOICE_ID = @InvoiceId
+		AND STATUS     = 'Pending'
+	</query>
+
+	<!-- ── Cancel ── -->
+	<query name="CancelInvoice">
+		UPDATE HS_BILL_INVOICES
+		SET STATUS = 'Cancelled'
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- ── Status auto-update after payment ── -->
+	<query name="UpdateInvoiceStatus">
+		UPDATE HS_BILL_INVOICES
+		SET STATUS = @Status
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- Guard: does the invoice have any payments? -->
+	<query name="HasPayments">
+		SELECT COUNT(1)
+		FROM HS_BILL_PAYMENTS
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- ── Dashboard ── -->
+	<query name="GetInvoiceSummaryByStatus">
+		SELECT
+		STATUS,
+		COUNT(*)    AS TOTAL_COUNT,
+		ISNULL(
+		SUM(
+		(SELECT SUM(LINE_TOTAL)
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = i.INVOICE_ID)
+		), 0
+		) AS TOTAL_AMOUNT
+		FROM HS_BILL_INVOICES i
+		GROUP BY STATUS
+	</query>
+
+	<query name="GetRecentInvoices">
+		SELECT TOP 5
+		i.INVOICE_NUMBER,
+		c.FIRST_NAME + ' ' + c.LAST_NAME AS CUSTOMER_NAME,
+		i.STATUS,
+		ISNULL(
+		(SELECT SUM(LINE_TOTAL)
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = i.INVOICE_ID), 0
+		) AS INVOICE_TOTAL
+		FROM HS_BILL_INVOICES i
+		INNER JOIN HS_BILL_CUSTOMERS c ON c.CUSTOMER_ID = i.CUSTOMER_ID
+		ORDER BY i.CREATED_DATE DESC
+	</query>
+
+</queries>

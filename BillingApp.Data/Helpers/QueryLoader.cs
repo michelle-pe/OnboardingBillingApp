@@ -40,13 +40,16 @@ namespace BillingApp.Data.Helpers
 
         private static Dictionary<string, string> LoadFile(string fileName)
         {
-            // Looks for the file next to the executing assembly (works after
-            // "Copy to Output Directory = Copy if newer" is set on the XML)
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var path = Path.Combine(baseDir, "Queries", fileName + ".xml");
+            var path = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Queries",
+                fileName + ".xml"
+            );
 
             if (!File.Exists(path))
-                throw new FileNotFoundException($"Query file not found: {path}");
+                throw new FileNotFoundException(
+                    string.Format("Query file not found: {0}", path)
+                );
 
             var queries = new Dictionary<string, string>();
             var doc = XDocument.Load(path);
