@@ -1,0 +1,77 @@
+﻿<queries>
+
+	<query name="GetPaymentsByInvoiceId">
+		SELECT
+		PAYMENT_ID,
+		INVOICE_ID,
+		PAYMENT_DATE,
+		AMOUNT,
+		PAYMENT_METHOD,
+		REFERENCE,
+		CREATED_DATE
+		FROM HS_BILL_PAYMENTS
+		WHERE INVOICE_ID = @InvoiceId
+		ORDER BY PAYMENT_DATE DESC
+	</query>
+
+	<query name="GetPaymentById">
+		SELECT *
+		FROM HS_BILL_PAYMENTS
+		WHERE PAYMENT_ID = @PaymentId
+	</query>
+
+	<query name="InsertPayment">
+		INSERT INTO HS_BILL_PAYMENTS
+		(INVOICE_ID, PAYMENT_DATE, AMOUNT, PAYMENT_METHOD, REFERENCE)
+		VALUES
+		(@InvoiceId, @PaymentDate, @Amount, @PaymentMethod, @Reference)
+	</query>
+
+	<query name="DeletePayment">
+		DELETE FROM HS_BILL_PAYMENTS
+		WHERE PAYMENT_ID = @PaymentId
+	</query>
+
+	<!-- Sum of all payments made against an invoice -->
+	<query name="GetTotalPaidByInvoiceId">
+		SELECT ISNULL(SUM(AMOUNT), 0) AS TOTAL_PAID
+		FROM HS_BILL_PAYMENTS
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- ── Dashboard ── -->
+	<query name="GetTotalRevenue">
+		SELECT ISNULL(SUM(AMOUNT), 0) AS TOTAL_REVENUE
+		FROM HS_BILL_PAYMENTS
+	</query>
+
+	<query name="GetRecentPayments">
+		SELECT TOP 5
+		p.PAYMENT_ID,
+		p.AMOUNT,
+		p.PAYMENT_DATE,
+		p.PAYMENT_METHOD,
+		i.INVOICE_NUMBER
+		FROM HS_BILL_PAYMENTS p
+		INNER JOIN HS_BILL_INVOICES i ON i.INVOICE_ID = p.INVOICE_ID
+		ORDER BY p.PAYMENT_DATE DESC
+	</query>
+
+	<!-- Outstanding balance across all non-cancelled invoices -->
+	<query name="GetTotalOutstanding">
+		SELECT
+		ISNULL(SUM(inv_total.INVOICE_TOTAL), 0)
+		- ISNULL((SELECT SUM(AMOUNT) FROM HS_BILL_PAYMENTS), 0)
+		AS TOTAL_OUTSTANDING
+		FROM (
+		SELECT
+		i.INVOICE_ID,
+		ISNULL(SUM(ii.LINE_TOTAL), 0) AS INVOICE_TOTAL
+		FROM HS_BILL_INVOICES i
+		LEFT JOIN HS_BILL_INVOICE_ITEMS ii ON ii.INVOICE_ID = i.INVOICE_ID
+		WHERE i.STATUS NOT IN ('Cancelled', 'Paid')
+		GROUP BY i.INVOICE_ID
+		) AS inv_total
+	</query>
+
+</queries>

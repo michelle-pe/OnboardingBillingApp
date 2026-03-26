@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<queries>
+
+	<query name="GetAllCustomers">
+		SELECT *
+		FROM HS_BILL_CUSTOMERS
+		WHERE IS_ACTIVE = 1
+		ORDER BY FIRST_NAME, LAST_NAME
+	</query>
+
+	<query name="GetCustomerById">
+		SELECT *
+		FROM HS_BILL_CUSTOMERS
+		WHERE CUSTOMER_ID = @CustomerId
+	</query>
+
+	<query name="InsertCustomer">
+		INSERT INTO HS_BILL_CUSTOMERS
+		(FIRST_NAME, LAST_NAME, EMAIL, PHONE, ADDRESS)
+		VALUES
+		(@FirstName, @LastName, @Email, @Phone, @Address)
+	</query>
+
+	<query name="UpdateCustomer">
+		UPDATE HS_BILL_CUSTOMERS
+		SET FIRST_NAME = @FirstName,
+		LAST_NAME  = @LastName,
+		EMAIL      = @Email,
+		PHONE      = @Phone,
+		ADDRESS    = @Address
+		WHERE CUSTOMER_ID = @CustomerId
+	</query>
+
+	<!-- Soft delete -->
+	<query name="DeleteCustomer">
+		UPDATE HS_BILL_CUSTOMERS
+		SET IS_ACTIVE = 0
+		WHERE CUSTOMER_ID = @CustomerId
+	</query>
+
+	<!-- Guard: prevent delete if customer has any invoices -->
+	<query name="HasInvoices">
+		SELECT COUNT(1)
+		FROM HS_BILL_INVOICES
+		WHERE CUSTOMER_ID = @CustomerId
+	</query>
+
+	<!-- Dashboard: total active customers -->
+	<query name="GetTotalActiveCustomers">
+		SELECT COUNT(1) AS TOTAL_ACTIVE_CUSTOMERS
+		FROM HS_BILL_CUSTOMERS
+		WHERE IS_ACTIVE = 1
+	</query>
+
+</queries>

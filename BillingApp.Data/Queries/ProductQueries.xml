@@ -1,0 +1,45 @@
+﻿<queries>
+
+	<query name="GetAllProducts">
+		SELECT *
+		FROM HS_BILL_PRODUCTS
+		WHERE IS_ACTIVE = 1
+		ORDER BY PRODUCT_NAME
+	</query>
+
+	<query name="GetProductById">
+		SELECT *
+		FROM HS_BILL_PRODUCTS
+		WHERE PRODUCT_ID = @ProductId
+	</query>
+
+	<query name="InsertProduct">
+		INSERT INTO HS_BILL_PRODUCTS
+		(PRODUCT_NAME, DESCRIPTION, UNIT_PRICE)
+		VALUES
+		(@ProductName, @Description, @UnitPrice)
+	</query>
+
+	<query name="UpdateProduct">
+		UPDATE HS_BILL_PRODUCTS
+		SET PRODUCT_NAME = @ProductName,
+		DESCRIPTION  = @Description,
+		UNIT_PRICE   = @UnitPrice
+		WHERE PRODUCT_ID = @ProductId
+	</query>
+
+	<!-- Soft delete -->
+	<query name="DeleteProduct">
+		UPDATE HS_BILL_PRODUCTS
+		SET IS_ACTIVE = 0
+		WHERE PRODUCT_ID = @ProductId
+	</query>
+
+	<!-- Guard: prevent delete if product is used in any invoice item -->
+	<query name="IsProductUsedInInvoice">
+		SELECT COUNT(1)
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE PRODUCT_ID = @ProductId
+	</query>
+
+</queries>

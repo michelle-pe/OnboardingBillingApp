@@ -1,0 +1,51 @@
+﻿<queries>
+
+	<query name="GetItemsByInvoiceId">
+		SELECT
+		ii.INVOICE_ITEM_ID,
+		ii.INVOICE_ID,
+		ii.PRODUCT_ID,
+		ii.QUANTITY,
+		ii.UNIT_PRICE,
+		ii.LINE_TOTAL,
+		p.PRODUCT_NAME,
+		p.DESCRIPTION
+		FROM HS_BILL_INVOICE_ITEMS ii
+		INNER JOIN HS_BILL_PRODUCTS p ON p.PRODUCT_ID = ii.PRODUCT_ID
+		WHERE ii.INVOICE_ID = @InvoiceId
+	</query>
+
+	<query name="InsertInvoiceItem">
+		INSERT INTO HS_BILL_INVOICE_ITEMS
+		(INVOICE_ID, PRODUCT_ID, QUANTITY, UNIT_PRICE)
+		VALUES
+		(@InvoiceId, @ProductId, @Quantity, @UnitPrice)
+	</query>
+
+	<query name="UpdateInvoiceItem">
+		UPDATE HS_BILL_INVOICE_ITEMS
+		SET PRODUCT_ID = @ProductId,
+		QUANTITY   = @Quantity,
+		UNIT_PRICE = @UnitPrice
+		WHERE INVOICE_ITEM_ID = @InvoiceItemId
+	</query>
+
+	<query name="DeleteInvoiceItem">
+		DELETE FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ITEM_ID = @InvoiceItemId
+	</query>
+
+	<!-- Remove all items for an invoice (used when re-saving a Pending invoice) -->
+	<query name="DeleteItemsByInvoiceId">
+		DELETE FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+	<!-- Total of an invoice (sum of computed LINE_TOTAL) -->
+	<query name="GetInvoiceTotal">
+		SELECT ISNULL(SUM(LINE_TOTAL), 0) AS INVOICE_TOTAL
+		FROM HS_BILL_INVOICE_ITEMS
+		WHERE INVOICE_ID = @InvoiceId
+	</query>
+
+</queries>

@@ -46,8 +46,14 @@
   <ItemGroup>
     <Folder Include="Helpers\" />
     <Folder Include="Models\" />
-    <Folder Include="Queries\" />
     <Folder Include="Repositories\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Queries\CustomerQueries.xml" />
+    <Content Include="Queries\InvoiceItemQueries.xml" />
+    <Content Include="Queries\InvoiceQueries.xml" />
+    <Content Include="Queries\PaymentQueries.xml" />
+    <Content Include="Queries\ProductQueries.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
