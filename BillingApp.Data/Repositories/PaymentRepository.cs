@@ -18,6 +18,22 @@ namespace BillingApp.Data.Repositories
             _connectionString = connectionString;
         }
 
+        public List<Payment> GetAll()
+        {
+            var list = new List<Payment>();
+            var sql = QueryLoader.GetQuery(QueryFile, "GetAllPayments");
+
+            using (var conn = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
+                    while (reader.Read())
+                        list.Add(Map(reader));
+            }
+            return list;
+        }
+
         public List<Payment> GetByInvoiceId(int invoiceId)
         {
             var list = new List<Payment>();

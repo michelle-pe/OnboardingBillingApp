@@ -21,7 +21,7 @@
                class="btn btn-outline-secondary">Back</a>
             <a class="btn btn-outline-primary"
                data-bind="visible: status() === 'Pending',
-                          attr: { href: '/Invoice/Edit/' + invoiceId() }">
+                          attr: { href: '@Url.Action("Edit","Invoice")/' + invoiceId() }">
                 Edit
             </a>
         </div>

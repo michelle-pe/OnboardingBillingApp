@@ -157,7 +157,7 @@
                         <tbody data-bind="foreach: recentInvoices">
                             <tr style="cursor:pointer"
                                 data-bind="click: function() {
-                                    window.location.href = '/Invoice/Detail/' + InvoiceId;
+                                    window.location.href = '@Url.Action("Detail","Invoice")/' + InvoiceId;
                                 }">
                                 <td data-bind="text: InvoiceNumber"></td>
                                 <td data-bind="text: CustomerFullName"></td>

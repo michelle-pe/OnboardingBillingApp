@@ -66,13 +66,13 @@
                     </td>
                     <td class="text-center">
                         <a class="btn btn-sm btn-outline-secondary me-1"
-                           data-bind="attr: { href: '/Invoice/Detail/' + InvoiceId() }">
+                           data-bind="attr: { href: '@Url.Action("Detail","Invoice")/' + InvoiceId() }">
                             View
                         </a>
                         <!-- Edit only if Pending -->
                         <a class="btn btn-sm btn-outline-primary me-1"
                            data-bind="visible: Status() === 'Pending',
-                                      attr: { href: '/Invoice/Edit/' + InvoiceId() }">
+                                      attr: { href: '@Url.Action("Edit","Invoice")/' + InvoiceId() }">
                             Edit
                         </a>
                         <!-- Cancel only if Pending -->

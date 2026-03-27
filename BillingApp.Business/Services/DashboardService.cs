@@ -41,13 +41,13 @@ namespace BillingApp.Business.Services
             return result;
         }
 
-        // Sum of all payments ever recorded
+        // Sum of all payments ever recorded     
         public decimal GetTotalRevenue()
         {
+            var allPayments = _paymentRepo.GetAll();
             decimal total = 0;
-            // Re-use per-invoice method across all invoices
-            foreach (var inv in _invoiceRepo.GetAll())
-                total += _paymentRepo.GetTotalPaid(inv.InvoiceId);
+            foreach (var p in allPayments)
+                total += p.Amount;
             return total;
         }
 
@@ -55,7 +55,9 @@ namespace BillingApp.Business.Services
         public decimal GetTotalOutstanding()
         {
             decimal outstanding = 0;
-            foreach (var inv in _invoiceRepo.GetAll())
+            var invoices = _invoiceRepo.GetAll();
+
+            foreach (var inv in invoices)
             {
                 if (inv.Status == "Cancelled") continue;
                 decimal total = _itemRepo.GetInvoiceTotal(inv.InvoiceId);
@@ -73,14 +75,21 @@ namespace BillingApp.Business.Services
         }
 
         // 5 most recent payments
+        //public List<Payment> GetRecentPayments()
+        //{
+        //    // Collect from all invoices and sort
+        //    var all = new List<Payment>();
+        //    foreach (var inv in _invoiceRepo.GetAll())
+        //        all.AddRange(_paymentRepo.GetByInvoiceId(inv.InvoiceId));
+
+        //    all.Sort((a, b) => b.PaymentDate.CompareTo(a.PaymentDate));
+        //    return all.Count > 5 ? all.GetRange(0, 5) : all;
+        //}
+
         public List<Payment> GetRecentPayments()
         {
-            // Collect from all invoices and sort
-            var all = new List<Payment>();
-            foreach (var inv in _invoiceRepo.GetAll())
-                all.AddRange(_paymentRepo.GetByInvoiceId(inv.InvoiceId));
-
-            all.Sort((a, b) => b.PaymentDate.CompareTo(a.PaymentDate));
+            var all = _paymentRepo.GetAll();
+            // Already ordered DESC by payment date from the query
             return all.Count > 5 ? all.GetRange(0, 5) : all;
         }
     }
