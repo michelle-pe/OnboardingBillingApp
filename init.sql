@@ -8,11 +8,24 @@
 -- ------------------------------------------------------------
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'BillingAppDB')
 BEGIN
-    CREATE DATABASE BillingAppDB;
+    CREATE DATABASE BillingAppDB
+    ON PRIMARY
+    (
+        NAME     = 'BillingAppDB',
+        FILENAME = 'C:\SQL_DATA\BillingAppDB.mdf',
+        SIZE     = 10MB,
+        MAXSIZE  = UNLIMITED,
+        FILEGROWTH = 5MB
+    )
+    LOG ON
+    (
+        NAME     = 'BillingAppDB_log',
+        FILENAME = 'C:\SQL_DATA\BillingAppDB_log.ldf',
+        SIZE     = 5MB,
+        MAXSIZE  = 100MB,
+        FILEGROWTH = 5MB
+    );
 END
-GO
-
-USE BillingAppDB;
 GO
 
 -- ------------------------------------------------------------

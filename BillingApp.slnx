@@ -2,7 +2,7 @@
   <Folder Name="/Database/">
     <File Path="init.sql" />
   </Folder>
-  <Project Path="BillingApp.Business/BillingApp.Business.csproj" />
-  <Project Path="BillingApp.Data/BillingApp.Data.csproj" />
-  <Project Path="BillingApp.Web/BillingApp.Web.csproj" />
+  <Project Path="BillingApp.Business/BillingApp.Business.csproj" Id="a0360cf3-dde6-4cee-8366-4986b649956d" />
+  <Project Path="BillingApp.Data/BillingApp.Data.csproj" Id="f1c49c5b-53da-4b86-b9ef-312232e43990" />
+  <Project Path="BillingApp.Web/BillingApp.Web.csproj" Id="c86a5305-d333-4ad7-a651-4e0a99f38cf9" />
 </Solution>
